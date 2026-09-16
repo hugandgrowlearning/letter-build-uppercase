@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build the Alphabet - Handwriting Without Tears</title>
+  <style>
+    :root {
+      --bg-color: #f7f9fc;
+      --board-color: #2b5c8f;
+      --board-border: #1d3f63;
+      --wood-color: #d49a42;
+      --wood-border: #8c5b18;
+      --wood-grain: #c2872e;
+    }
+
+    * { box-sizing: border-box; touch-action: manipulation; }
+    body {
+      margin: 0; padding: 15px; font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+      background: var(--bg-color); text-align: center; user-select: none;
+    }
+
+    h1 { margin: 5px 0; color: #2c3e50; font-size: 1.8rem; }
+    
+    .letter-selector {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
+      max-width: 800px; margin: 0 auto 15px auto;
+    }
+    .letter-btn {
+      width: 34px; height: 34px; border: 2px solid #bdc3c7; background: #fff;
+      border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer;
+      box-shadow: 0 2px 0 #bdc3c7; transition: all 0.1s;
+    }
+    .letter-btn.active {
+      background: #f1c40f; border-color: #f39c12; box-shadow: 0 2px 0 #d35400; transform: translateY(-2px);
+    }
+
+    .prompt-box {
+      font-size: 1.1rem; color: #2c3e50; background: #e8f4f8; padding: 8px 15px;
+      border-radius: 20px; display: inline-block; margin-bottom: 10px; font-weight: bold;
+    }
+
+    .game-layout {
+      display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;
+      align-items: flex-start; max-width: 900px; margin: 0 auto;
+    }
+
+    /* Blue Felt Board Workspace */
+    .board-container {
+      position: relative; width: 340px; height: 380px; background: var(--board-color);
+      border: 8px solid var(--board-border); border-radius: 16px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.15);
+    }
+    .top-left-smiley {
+      position: absolute; top: 10px; left: 10px; width: 30px; height: 30px;
+      background: #f1c40f; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 18px; border: 2px solid #d35400; z-index: 5;
+    }
+
+    /* Wooden Pieces Tray */
+    .tray-container {
+      width: 220px; min-height: 380px; background: #e2d1b9; border: 4px solid #b39775;
+      border-radius: 16px; padding: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .tray-title { font-size: 1rem; color: #5d4037; margin-bottom: 10px; font-weight: bold; }
+
+    /* Wooden Stick Styles */
+    .stick {
+      position: absolute; cursor: grab; z-index: 10;
+      filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.25));
+    }
+    .stick:active { cursor: grabbing; z-index: 100; }
+    
+    .big-line {
+      width: 20px; height: 210px; background: var(--wood-color);
+      border: 2px solid var(--wood-border); border-radius: 10px;
+    }
+    .little-line {
+      width: 20px; height: 105px; background: var(--wood-color);
+      border: 2px solid var(--wood-border); border-radius: 10px;
+    }
+    .big-curve {
+      width: 100px; height: 200px; border: 20px solid var(--wood-color);
+      border-right: none; border-radius: 100px 0 0 100px; box-sizing: border-box;
+      outline: 2px solid var(--wood-border); outline-offset: -2px;
+    }
+    .little-curve {
+      width: 60px; height: 110px; border: 20px solid var(--wood-color);
+      border-right: none; border-radius: 60px 0 0 60px; box-sizing: border-box;
+      outline: 2px solid var(--wood-border); outline-offset: -2px;
+    }
+
+    /* Dotted Target Guides on Board */
+    .slot {
+      position: absolute; opacity: 0.45; border: 2px dashed #ffffff;
+      pointer-events: none; z-index: 1; box-sizing: border-box;
+    }
+    .slot.big-line { border-radius: 10px; width: 20px; height: 210px; }
+    .slot.little-line { border-radius: 10px; width: 20px; height: 105px; }
+    .slot.big-curve {
+      width: 100px; height: 200px; border-radius: 100px 0 0 100px; border-right: none;
+    }
+    .slot.little-curve {
+      width: 60px; height: 110px; border-radius: 60px 0 0 60px; border-right: none;
+    }
+
+    /* Win Banner */
+    .win-banner {
+      display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+      background: #2ecc71; color: white; padding: 15px 30px; border-radius: 30px;
+      font-size: 1.5rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 200;
+      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop { 0% { transform: translate(-50%, -50%) scale(0); } 100% { transform: translate(-50%, -50%) scale(1); } }
+  </style>
+</head>
+<body>
+
+  <h1>Build the Alphabet</h1>
+  <div class="prompt-box" id="promptText">Select a letter to start</div>
+  
+  <div class="letter-selector" id="letterSelector"></div>
+
+  <div class="game-layout">
+    <div class="board-container" id="board">
+      <div class="top-left-smiley" title="Start at top left!">😊</div>
+      <div class="win-banner" id="winBanner">Great Job! 🎉</div>
+    </div>
+
+    <div class="tray-container" id="tray">
+      <div class="tray-title">Wooden Pieces Needed</div>
+    </div>
+  </div>
+
+  <script>
+    // Web Audio Synthesizer
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playAudioTone(freq, duration, type = 'sine') {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function speakText(text) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Handwriting Without Tears Precise Letter Formations Data (A-Z)
+    const letterConfigs = {
+      'A': {
+        prompt: 'Big line, big line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 130, targetY: 85, rot: 18 },    // Left slant meeting at apex
+          { type: 'big-line', targetX: 190, targetY: 85, rot: -18 },   // Right slant meeting at apex
+          { type: 'little-line', targetX: 130, targetY: 195, rot: 90 } // Centered crossbar
+        ]
+      },
+      'B': {
+        prompt: 'Big line, little curve, little curve',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-curve', targetX: 120, targetY: 85, rot: 180 },
+          { type: 'little-curve', targetX: 120, targetY: 185, rot: 180 }
+        ]
+      },
+      'C': {
+        prompt: 'Big curve',
+        pieces: [
+          { type: 'big-curve', targetX: 120, targetY: 90, rot: 0 }
+        ]
+      },
+      'D': {
+        prompt: 'Big line, big curve',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'big-curve', targetX: 120, targetY: 90, rot: 180 }
+        ]
+      },
+      'E': {
+        prompt: 'Big line, little line, little line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 110, targetY: 85, rot: 90 },
+          { type: 'little-line', targetX: 110, targetY: 180, rot: 90 },
+          { type: 'little-line', targetX: 110, targetY: 275, rot: 90 }
+        ]
+      },
+      'F': {
+        prompt: 'Big line, little line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 110, targetY: 85, rot: 90 },
+          { type: 'little-line', targetX: 110, targetY: 180, rot: 90 }
+        ]
+      },
+      'G': {
+        prompt: 'Big curve, little line',
+        pieces: [
+          { type: 'big-curve', targetX: 120, targetY: 90, rot: 0 },
+          { type: 'little-line', targetX: 170, targetY: 200, rot: 90 }
+        ]
+      },
+      'H': {
+        prompt: 'Big line, big line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 90, targetY: 85, rot: 0 },
+          { type: 'big-line', targetX: 230, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 120, targetY: 180, rot: 90 }
+        ]
+      },
+      'I': {
+        prompt: 'Big line, little line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 160, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 120, targetY: 85, rot: 90 },
+          { type: 'little-line', targetX: 120, targetY: 275, rot: 90 }
+        ]
+      },
+      'J': {
+        prompt: 'Big line, little curve',
+        pieces: [
+          { type: 'big-line', targetX: 180, targetY: 85, rot: 0 },
+          { type: 'little-curve', targetX: 130, targetY: 195, rot: 270 }
+        ]
+      },
+      'K': {
+        prompt: 'Big line, little line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 160, targetY: 100, rot: -45 },
+          { type: 'little-line', targetX: 160, targetY: 180, rot: 45 }
+        ]
+      },
+      'L': {
+        prompt: 'Big line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 110, targetY: 275, rot: 90 }
+        ]
+      },
+      'M': {
+        prompt: 'Big line, big line, big line, big line',
+        pieces: [
+          { type: 'big-line', targetX: 60, targetY: 85, rot: 0 },
+          { type: 'big-line', targetX: 115, targetY: 90, rot: -20 },
+          { type: 'big-line', targetX: 205, targetY: 90, rot: 20 },
+          { type: 'big-line', targetX: 260, targetY: 85, rot: 0 }
+        ]
+      },
+      'N': {
+        prompt: 'Big line, big line, big line',
+        pieces: [
+          { type: 'big-line', targetX: 80, targetY: 85, rot: 0 },
+          { type: 'big-line', targetX: 160, targetY: 85, rot: -25 },
+          { type: 'big-line', targetX: 240, targetY: 85, rot: 0 }
+        ]
+      },
+      'O': {
+        prompt: 'Big curve, big curve',
+        pieces: [
+          { type: 'big-curve', targetX: 100, targetY: 90, rot: 0 },
+          { type: 'big-curve', targetX: 140, targetY: 90, rot: 180 }
+        ]
+      },
+      'P': {
+        prompt: 'Big line, little curve',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-curve', targetX: 120, targetY: 85, rot: 180 }
+        ]
+      },
+      'Q': {
+        prompt: 'Big curve, big curve, little line',
+        pieces: [
+          { type: 'big-curve', targetX: 100, targetY: 90, rot: 0 },
+          { type: 'big-curve', targetX: 140, targetY: 90, rot: 180 },
+          { type: 'little-line', targetX: 190, targetY: 230, rot: -45 }
+        ]
+      },
+      'R': {
+        prompt: 'Big line, little curve, little line',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'little-curve', targetX: 120, targetY: 85, rot: 180 },
+          { type: 'little-line', targetX: 165, targetY: 185, rot: -45 }
+        ]
+      },
+      'S': {
+        prompt: 'Little curve, little curve',
+        pieces: [
+          { type: 'little-curve', targetX: 140, targetY: 85, rot: 0 },
+          { type: 'little-curve', targetX: 140, targetY: 185, rot: 180 }
+        ]
+      },
+      'T': {
+        prompt: 'Big line, little line',
+        pieces: [
+          { type: 'big-line', targetX: 160, targetY: 85, rot: 0 },
+          { type: 'little-line', targetX: 120, targetY: 85, rot: 90 }
+        ]
+      },
+      'U': {
+        prompt: 'Big line, big line, little curve',
+        pieces: [
+          { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
+          { type: 'big-line', targetX: 220, targetY: 85, rot: 0 },
+          { type: 'little-curve', targetX: 150, targetY: 195, rot: 270 }
+        ]
+      },
+      'V': {
+        prompt: 'Big line, big line',
+        pieces: [
+          { type: 'big-line', targetX: 120, targetY: 85, rot: 20 },
+          { type: 'big-line', targetX: 200, targetY: 85, rot: -20 }
+        ]
+      },
+      'W': {
+        prompt: 'Big line, big line, big line, big line',
+        pieces: [
+          { type: 'big-line', targetX: 60, targetY: 85, rot: 15 },
+          { type: 'big-line', targetX: 125, targetY: 85, rot: -15 },
+          { type: 'big-line', targetX: 195, targetY: 85, rot: 15 },
+          { type: 'big-line', targetX: 260, targetY: 85, rot: -15 }
+        ]
+      },
+      'X': {
+        prompt: 'Big line, big line',
+        pieces: [
+          { type: 'big-line', targetX: 160, targetY: 85, rot: 30 },
+          { type: 'big-line', targetX: 160, targetY: 85, rot: -30 }
+        ]
+      },
+      'Y': {
+        prompt: 'Little line, little line, big line',
+        pieces: [
+          { type: 'little-line', targetX: 110, targetY: 85, rot: 30 },
+          { type: 'little-line', targetX: 190, targetY: 85, rot: -30 },
+          { type: 'big-line', targetX: 160, targetY: 165, rot: 0 }
+        ]
+      },
+      'Z': {
+        prompt: 'Little line, big line, little line',
+        pieces: [
+          { type: 'little-line', targetX: 120, targetY: 85, rot: 90 },
+          { type: 'big-line', targetX: 160, targetY: 85, rot: 32 },
+          { type: 'little-line', targetX: 120, targetY: 275, rot: 90 }
+        ]
+      }
+    };
+
+    let activeLetter = 'A';
+    let totalPieces = 0;
+    let placedPieces = 0;
+
+    // Initialize UI
+    function initSelector() {
+      const selector = document.getElementById('letterSelector');
+      for (let i = 65; i <= 90; i++) {
+        const char = String.fromCharCode(i);
+        const btn = document.createElement('button');
+        btn.className = `letter-btn ${char === activeLetter ? 'active' : ''}`;
+        btn.innerText = char;
+        btn.onclick = () => loadLetter(char);
+        selector.appendChild(btn);
+      }
+    }
+
+    function loadLetter(letter) {
+      activeLetter = letter;
+      placedPieces = 0;
+      
+      // Update UI active state
+      document.querySelectorAll('.letter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText === letter);
+      });
+
+      document.getElementById('winBanner').style.display = 'none';
+
+      const config = letterConfigs[letter];
+      if (!config) return;
+
+      document.getElementById('promptText').innerText = `${letter}: ${config.prompt}`;
+      speakText(`${letter}. ${config.prompt}`);
+
+      const board = document.getElementById('board');
+      const tray = document.getElementById('tray');
+
+      // Clear existing elements except title/smiley/win banner
+      board.querySelectorAll('.slot, .stick').forEach(e => e.remove());
+      tray.querySelectorAll('.stick').forEach(e => e.remove());
+
+      totalPieces = config.pieces.length;
+
+      // Create Slot targets on board and Draggables in Tray
+      config.pieces.forEach((p, idx) => {
+        // Target slot
+        const slot = document.createElement('div');
+        slot.className = `slot ${p.type}`;
+        slot.style.left = `${p.targetX}px`;
+        slot.style.top = `${p.targetY}px`;
+        slot.style.transform = `rotate(${p.rot}deg)`;
+        board.appendChild(slot);
+
+        // Interactive Wooden Piece
+        const stick = document.createElement('div');
+        stick.className = `stick ${p.type}`;
+        stick.dataset.targetX = p.targetX;
+        stick.dataset.targetY = p.targetY;
+        stick.dataset.rot = p.rot;
+        stick.style.transform = `rotate(${p.rot}deg)`;
+        
+        // Stagger tray positions
+        stick.style.left = '20px';
+        stick.style.top = `${60 + idx * 75}px`;
+
+        enableDrag(stick);
+        tray.appendChild(stick);
+      });
+    }
+
+    function enableDrag(elmnt) {
+      let active = false;
+      let startX, startY, initialLeft, initialTop;
+
+      function onStart(e) {
+        active = true;
+        playAudioTone(300, 0.05);
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        startX = clientX;
+        startY = clientY;
+        initialLeft = elmnt.offsetLeft;
+        initialTop = elmnt.offsetTop;
+
+        // Move piece to root board overlay while dragging
+        document.body.appendChild(elmnt);
+        elmnt.style.left = `${e.clientX - 20}px`;
+        elmnt.style.top = `${e.clientY - 40}px`;
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
+      }
+
+      function onMove(e) {
+        if (!active) return;
+        if (e.cancelable) e.preventDefault();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        elmnt.style.left = `${initialLeft + dx}px`;
+        elmnt.style.top = `${initialTop + dy}px`;
+      }
+
+      function onEnd(e) {
+        if (!active) return;
+        active = false;
+
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('mouseup', onEnd);
+        window.removeEventListener('touchend', onEnd);
+
+        // Check distance relative to blue board
+        const boardRect = document.getElementById('board').getBoundingClientRect();
+        const pieceRect = elmnt.getBoundingClientRect();
+
+        const currentX = pieceRect.left - boardRect.left;
+        const currentY = pieceRect.top - boardRect.top;
+
+        const targetX = parseFloat(elmnt.dataset.targetX);
+        const targetY = parseFloat(elmnt.dataset.targetY);
+
+        // Magnetic tolerance check (+/- 40 pixels)
+        if (Math.abs(currentX - targetX) < 40 && Math.abs(currentY - targetY) < 40) {
+          // Snap into place on board
+          elmnt.style.left = `${targetX}px`;
+          elmnt.style.top = `${targetY}px`;
+          document.getElementById('board').appendChild(elmnt);
+          
+          elmnt.onmousedown = null;
+          elmnt.ontouchstart = null;
+          elmnt.style.cursor = 'default';
+
+          playAudioTone(523.25, 0.15); // C5 Snap Tone
+          placedPieces++;
+
+          if (placedPieces === totalPieces) {
+            document.getElementById('winBanner').style.display = 'block';
+            playAudioTone(659.25, 0.1); // E5 Fanfare
+            setTimeout(() => playAudioTone(783.99, 0.3), 100); // G5 Fanfare
+            speakText(`Awesome! You built the letter ${activeLetter}!`);
+          }
+        } else {
+          // Return piece back to tray
+          document.getElementById('tray').appendChild(elmnt);
+          elmnt.style.left = `${initialLeft}px`;
+          elmnt.style.top = `${initialTop}px`;
+          playAudioTone(200, 0.1, 'sawtooth');
+        }
+      }
+
+      elmnt.onmousedown = onStart;
+      elmnt.ontouchstart = onStart;
+    }
+
+    // Startup
+    initSelector();
+    loadLetter('A');
+  </script>
+</body>
+</html>
