@@ -11,10 +11,9 @@
       --board-border: #1d3f63;
       --wood-color: #d49a42;
       --wood-border: #8c5b18;
-      --wood-grain: #c2872e;
     }
 
-    * { box-sizing: border-box; touch-action: manipulation; }
+    * { box-sizing: border-box; }
     body {
       margin: 0; padding: 15px; font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
       background: var(--bg-color); text-align: center; user-select: none;
@@ -45,7 +44,6 @@
       align-items: flex-start; max-width: 900px; margin: 0 auto;
     }
 
-    /* Blue Felt Board Workspace */
     .board-container {
       position: relative; width: 340px; height: 380px; background: var(--board-color);
       border: 8px solid var(--board-border); border-radius: 16px;
@@ -57,7 +55,6 @@
       justify-content: center; font-size: 18px; border: 2px solid #d35400; z-index: 5;
     }
 
-    /* Wooden Pieces Tray */
     .tray-container {
       width: 220px; min-height: 380px; background: #e2d1b9; border: 4px solid #b39775;
       border-radius: 16px; padding: 10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
@@ -68,6 +65,7 @@
     /* Wooden Stick Styles */
     .stick {
       position: absolute; cursor: grab; z-index: 10;
+      touch-action: none;
       filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.25));
     }
     .stick:active { cursor: grabbing; z-index: 100; }
@@ -91,10 +89,10 @@
       outline: 2px solid var(--wood-border); outline-offset: -2px;
     }
 
-    /* Dotted Target Guides on Board */
+    /* Target slots - pointer-events: none allows clicking through them */
     .slot {
       position: absolute; opacity: 0.45; border: 2px dashed #ffffff;
-      pointer-events: none; z-index: 1; box-sizing: border-box;
+      pointer-events: none !important; z-index: 1; box-sizing: border-box;
     }
     .slot.big-line { border-radius: 10px; width: 20px; height: 210px; }
     .slot.little-line { border-radius: 10px; width: 20px; height: 105px; }
@@ -105,21 +103,17 @@
       width: 60px; height: 110px; border-radius: 60px 0 0 60px; border-right: none;
     }
 
-    /* Win Banner */
     .win-banner {
       display: none; position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
       background: #2ecc71; color: white; padding: 15px 30px; border-radius: 30px;
       font-size: 1.5rem; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 200;
-      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    @keyframes pop { 0% { transform: translate(-50%, -50%) scale(0); } 100% { transform: translate(-50%, -50%) scale(1); } }
   </style>
 </head>
 <body>
 
   <h1>Build the Alphabet</h1>
   <div class="prompt-box" id="promptText">Select a letter to start</div>
-  
   <div class="letter-selector" id="letterSelector"></div>
 
   <div class="game-layout">
@@ -127,14 +121,12 @@
       <div class="top-left-smiley" title="Start at top left!">😊</div>
       <div class="win-banner" id="winBanner">Great Job! 🎉</div>
     </div>
-
     <div class="tray-container" id="tray">
       <div class="tray-title">Wooden Pieces Needed</div>
     </div>
   </div>
 
   <script>
-    // Web Audio Synthesizer
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     function playAudioTone(freq, duration, type = 'sine') {
@@ -159,14 +151,13 @@
       }
     }
 
-    // Handwriting Without Tears Precise Letter Formations Data (A-Z)
     const letterConfigs = {
       'A': {
         prompt: 'Big line, big line, little line',
         pieces: [
-          { type: 'big-line', targetX: 130, targetY: 85, rot: 18 },    // Left slant meeting at apex
-          { type: 'big-line', targetX: 190, targetY: 85, rot: -18 },   // Right slant meeting at apex
-          { type: 'little-line', targetX: 130, targetY: 195, rot: 90 } // Centered crossbar
+          { type: 'big-line', targetX: 130, targetY: 85, rot: 18 },
+          { type: 'big-line', targetX: 190, targetY: 85, rot: -18 },
+          { type: 'little-line', targetX: 130, targetY: 195, rot: 90 }
         ]
       },
       'B': {
@@ -177,12 +168,7 @@
           { type: 'little-curve', targetX: 120, targetY: 185, rot: 180 }
         ]
       },
-      'C': {
-        prompt: 'Big curve',
-        pieces: [
-          { type: 'big-curve', targetX: 120, targetY: 90, rot: 0 }
-        ]
-      },
+      'C': { prompt: 'Big curve', pieces: [{ type: 'big-curve', targetX: 120, targetY: 90, rot: 0 }] },
       'D': {
         prompt: 'Big line, big curve',
         pieces: [
@@ -366,7 +352,6 @@
     let totalPieces = 0;
     let placedPieces = 0;
 
-    // Initialize UI
     function initSelector() {
       const selector = document.getElementById('letterSelector');
       for (let i = 65; i <= 90; i++) {
@@ -383,7 +368,6 @@
       activeLetter = letter;
       placedPieces = 0;
       
-      // Update UI active state
       document.querySelectorAll('.letter-btn').forEach(btn => {
         btn.classList.toggle('active', btn.innerText === letter);
       });
@@ -399,15 +383,12 @@
       const board = document.getElementById('board');
       const tray = document.getElementById('tray');
 
-      // Clear existing elements except title/smiley/win banner
       board.querySelectorAll('.slot, .stick').forEach(e => e.remove());
       tray.querySelectorAll('.stick').forEach(e => e.remove());
 
       totalPieces = config.pieces.length;
 
-      // Create Slot targets on board and Draggables in Tray
       config.pieces.forEach((p, idx) => {
-        // Target slot
         const slot = document.createElement('div');
         slot.className = `slot ${p.type}`;
         slot.style.left = `${p.targetX}px`;
@@ -415,7 +396,6 @@
         slot.style.transform = `rotate(${p.rot}deg)`;
         board.appendChild(slot);
 
-        // Interactive Wooden Piece
         const stick = document.createElement('div');
         stick.className = `stick ${p.type}`;
         stick.dataset.targetX = p.targetX;
@@ -423,7 +403,6 @@
         stick.dataset.rot = p.rot;
         stick.style.transform = `rotate(${p.rot}deg)`;
         
-        // Stagger tray positions
         stick.style.left = '20px';
         stick.style.top = `${60 + idx * 75}px`;
 
@@ -434,23 +413,23 @@
 
     function enableDrag(elmnt) {
       let active = false;
-      let startX, startY, initialLeft, initialTop;
+      let offsetX = 0, offsetY = 0;
 
       function onStart(e) {
         active = true;
         playAudioTone(300, 0.05);
+
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        startX = clientX;
-        startY = clientY;
-        initialLeft = elmnt.offsetLeft;
-        initialTop = elmnt.offsetTop;
+        const rect = elmnt.getBoundingClientRect();
+        offsetX = clientX - rect.left;
+        offsetY = clientY - rect.top;
 
-        // Move piece to root board overlay while dragging
         document.body.appendChild(elmnt);
-        elmnt.style.left = `${e.clientX - 20}px`;
-        elmnt.style.top = `${e.clientY - 40}px`;
+        elmnt.style.position = 'fixed';
+        elmnt.style.left = `${clientX - offsetX}px`;
+        elmnt.style.top = `${clientY - offsetY}px`;
 
         window.addEventListener('mousemove', onMove);
         window.addEventListener('touchmove', onMove, { passive: false });
@@ -461,14 +440,12 @@
       function onMove(e) {
         if (!active) return;
         if (e.cancelable) e.preventDefault();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        const dx = clientX - startX;
-        const dy = clientY - startY;
+        const moveX = e.touches ? e.touches[0].clientX : e.clientX;
+        const moveY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        elmnt.style.left = `${initialLeft + dx}px`;
-        elmnt.style.top = `${initialTop + dy}px`;
+        elmnt.style.left = `${moveX - offsetX}px`;
+        elmnt.style.top = `${moveY - offsetY}px`;
       }
 
       function onEnd(e) {
@@ -480,7 +457,6 @@
         window.removeEventListener('mouseup', onEnd);
         window.removeEventListener('touchend', onEnd);
 
-        // Check distance relative to blue board
         const boardRect = document.getElementById('board').getBoundingClientRect();
         const pieceRect = elmnt.getBoundingClientRect();
 
@@ -490,9 +466,8 @@
         const targetX = parseFloat(elmnt.dataset.targetX);
         const targetY = parseFloat(elmnt.dataset.targetY);
 
-        // Magnetic tolerance check (+/- 40 pixels)
-        if (Math.abs(currentX - targetX) < 40 && Math.abs(currentY - targetY) < 40) {
-          // Snap into place on board
+        if (Math.abs(currentX - targetX) < 45 && Math.abs(currentY - targetY) < 45) {
+          elmnt.style.position = 'absolute';
           elmnt.style.left = `${targetX}px`;
           elmnt.style.top = `${targetY}px`;
           document.getElementById('board').appendChild(elmnt);
@@ -501,20 +476,20 @@
           elmnt.ontouchstart = null;
           elmnt.style.cursor = 'default';
 
-          playAudioTone(523.25, 0.15); // C5 Snap Tone
+          playAudioTone(523.25, 0.15);
           placedPieces++;
 
           if (placedPieces === totalPieces) {
             document.getElementById('winBanner').style.display = 'block';
-            playAudioTone(659.25, 0.1); // E5 Fanfare
-            setTimeout(() => playAudioTone(783.99, 0.3), 100); // G5 Fanfare
+            playAudioTone(659.25, 0.1);
+            setTimeout(() => playAudioTone(783.99, 0.3), 100);
             speakText(`Awesome! You built the letter ${activeLetter}!`);
           }
         } else {
-          // Return piece back to tray
+          elmnt.style.position = 'absolute';
           document.getElementById('tray').appendChild(elmnt);
-          elmnt.style.left = `${initialLeft}px`;
-          elmnt.style.top = `${initialTop}px`;
+          elmnt.style.left = '20px';
+          elmnt.style.top = '60px';
           playAudioTone(200, 0.1, 'sawtooth');
         }
       }
@@ -523,7 +498,6 @@
       elmnt.ontouchstart = onStart;
     }
 
-    // Startup
     initSelector();
     loadLetter('A');
   </script>
