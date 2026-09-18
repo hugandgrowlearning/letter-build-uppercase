@@ -129,27 +129,20 @@
     }
     .slot.big-line { height: 315px; }
     .slot.little-line { height: 157.5px; }
-    .slot.big-line::after, .slot.little-line::after {
-      content: ''; position: absolute; top: 0; bottom: 0; left: 50%;
-      border-left: 7.5px dotted #fff0d2;
-      transform: translateX(-50%);
-    }
     .slot.big-curve {
       width: 157.5px; height: 315px; border: 0;
     }
     .slot.little-curve {
       width: 97.5px; height: 172.5px; border: 0;
     }
-    .slot.big-curve::after, .slot.little-curve::after {
-      content: ''; position: absolute; inset: 11.25px;
-      border: 7.5px dotted #fff0d2; border-right: none;
-      box-sizing: border-box;
-    }
-    .slot.big-curve::after {
-      border-radius: 150px 0 0 150px;
-    }
-    .slot.little-curve::after {
-      border-radius: 90px 0 0 90px;
+    .trace-dot {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #fff0d2;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
     }
 
     .firework-particle {
@@ -194,6 +187,38 @@
       'big-curve': { width: 157.5, height: 315 },
       'little-curve': { width: 97.5, height: 172.5 }
     };
+
+    // Real dot elements render consistently on iPhone Safari. Rotated CSS
+    // dotted borders can collapse into just one or two square marks.
+    function addTraceDots(slot, type) {
+      const size = pieceSizes[type];
+      const isLine = type.includes('line');
+
+      if (isLine) {
+        const count = Math.max(7, Math.round(size.height / 18));
+        for (let i = 0; i < count; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'trace-dot';
+          dot.style.left = `${size.width / 2}px`;
+          dot.style.top = `${6 + (size.height - 12) * i / (count - 1)}px`;
+          slot.appendChild(dot);
+        }
+        return;
+      }
+
+      const inset = 11.25;
+      const arcWidth = size.width - inset * 2;
+      const arcHeight = size.height - inset * 2;
+      const count = type === 'big-curve' ? 25 : 15;
+      for (let i = 0; i < count; i++) {
+        const theta = -Math.PI / 2 + Math.PI * i / (count - 1);
+        const dot = document.createElement('span');
+        dot.className = 'trace-dot';
+        dot.style.left = `${inset + arcWidth * (1 - Math.cos(theta))}px`;
+        dot.style.top = `${inset + arcHeight / 2 + (arcHeight / 2) * Math.sin(theta)}px`;
+        slot.appendChild(dot);
+      }
+    }
 
     function getPiecePosition(piece) {
       const size = pieceSizes[piece.type];
@@ -582,6 +607,7 @@
         slot.style.left = `${pos.left}px`;
         slot.style.top = `${pos.top}px`;
         slot.style.transform = `rotate(${p.rot}deg)`;
+        addTraceDots(slot, p.type);
         board.appendChild(slot);
 
         const stick = document.createElement('div');
@@ -611,6 +637,7 @@
       let offsetX = 0, offsetY = 0;
 
       function onStart(e) {
+        if (e.cancelable) e.preventDefault();
         active = true;
         playAudioTone(300, 0.05);
 
@@ -630,6 +657,7 @@
         window.addEventListener('touchmove', onMove, { passive: false });
         window.addEventListener('mouseup', onEnd);
         window.addEventListener('touchend', onEnd);
+        window.addEventListener('touchcancel', onEnd);
       }
 
       function onMove(e) {
@@ -651,6 +679,7 @@
         window.removeEventListener('touchmove', onMove);
         window.removeEventListener('mouseup', onEnd);
         window.removeEventListener('touchend', onEnd);
+        window.removeEventListener('touchcancel', onEnd);
 
         const boardRect = document.getElementById('board').getBoundingClientRect();
         const pieceRect = elmnt.getBoundingClientRect();
