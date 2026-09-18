@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
   <title>Build the Alphabet - Handwriting Without Tears</title>
   <style>
     :root {
@@ -82,6 +85,16 @@
       position: absolute; cursor: grab; z-index: 10;
       touch-action: none;
       filter: drop-shadow(3px 5px 5px rgba(73, 43, 16, 0.28));
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    /* iPad Safari can leave a stale filtered compositor layer behind when a
+       dragged element is reparented.  Disable that layer only during the move;
+       the shadow is restored once the piece has settled. */
+    .stick.is-dragging {
+      filter: none !important;
+      -webkit-filter: none !important;
     }
     .stick:active { cursor: grabbing; z-index: 100; }
     
@@ -210,6 +223,8 @@
     const TRAY_PIECE_TOP = 85 * BUILD_SCALE;
 
     const pieceSizes = {
+      // A big straight line is exactly 2 × a little straight line.  The big
+      // curve uses the same height as the big line so their ends align.
       'big-line': { width: 20 * BUILD_SCALE, height: 210 * BUILD_SCALE },
       'little-line': { width: 20 * BUILD_SCALE, height: 105 * BUILD_SCALE },
       'big-curve': { width: 105 * BUILD_SCALE, height: 210 * BUILD_SCALE },
@@ -366,6 +381,16 @@
         utterance.rate = 0.9;
         window.speechSynthesis.speak(utterance);
       }
+    }
+
+    function speakLetter(letter) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(`${letter}.`);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.78;
+      utterance.pitch = 1.08;
+      window.speechSynthesis.speak(utterance);
     }
 
     function pieceLabel(type) {
@@ -602,7 +627,10 @@
         const btn = document.createElement('button');
         btn.className = `letter-btn ${char === activeLetter ? 'active' : ''}`;
         btn.innerText = char;
-        btn.onclick = () => loadLetter(char);
+        btn.onclick = () => {
+          speakLetter(char);
+          loadLetter(char);
+        };
         selector.appendChild(btn);
       }
     }
@@ -632,6 +660,8 @@
         const pos = getPiecePosition(p);
         const slot = document.createElement('div');
         slot.className = `slot ${p.type}`;
+        slot.style.width = `${pieceSizes[p.type].width}px`;
+        slot.style.height = `${pieceSizes[p.type].height}px`;
         slot.style.left = `${pos.left}px`;
         slot.style.top = `${pos.top}px`;
         slot.style.transform = `rotate(${p.rot}deg)`;
@@ -640,6 +670,8 @@
 
         const stick = document.createElement('div');
         stick.className = `stick ${p.type}`;
+        stick.style.width = `${pieceSizes[p.type].width}px`;
+        stick.style.height = `${pieceSizes[p.type].height}px`;
         stick.dataset.targetX = pos.left;
         stick.dataset.targetY = pos.top;
         stick.dataset.targetCx = pos.cx;
@@ -676,10 +708,15 @@
         offsetX = clientX - rect.left;
         offsetY = clientY - rect.top;
 
+        elmnt.classList.add('is-dragging');
+        /* Clear Safari's old tray layer before moving the element to body. */
+        elmnt.style.visibility = 'hidden';
+        void elmnt.offsetHeight;
         document.body.appendChild(elmnt);
         elmnt.style.position = 'fixed';
         elmnt.style.left = `${clientX - offsetX}px`;
         elmnt.style.top = `${clientY - offsetY}px`;
+        elmnt.style.visibility = 'visible';
 
         window.addEventListener('mousemove', onMove);
         window.addEventListener('touchmove', onMove, { passive: false });
@@ -721,10 +758,16 @@
         const targetCy = parseFloat(elmnt.dataset.targetCy);
 
         if (Math.abs(currentCx - targetCx) < 48 * BUILD_SCALE && Math.abs(currentCy - targetCy) < 48 * BUILD_SCALE) {
+          elmnt.style.visibility = 'hidden';
+          void elmnt.offsetHeight;
           elmnt.style.position = 'absolute';
           elmnt.style.left = `${targetX}px`;
           elmnt.style.top = `${targetY}px`;
           document.getElementById('board').appendChild(elmnt);
+          requestAnimationFrame(() => {
+            elmnt.classList.remove('is-dragging');
+            elmnt.style.visibility = 'visible';
+          });
           
           elmnt.onmousedown = null;
           elmnt.ontouchstart = null;
@@ -742,11 +785,17 @@
             showFormationStep(placedPieces);
           }
         } else {
+          elmnt.style.visibility = 'hidden';
+          void elmnt.offsetHeight;
           elmnt.style.position = 'absolute';
           document.getElementById('tray').appendChild(elmnt);
           const size = pieceSizes[elmnt.dataset.pieceType];
           elmnt.style.left = `${(TRAY_INNER_WIDTH - size.width) / 2}px`;
           elmnt.style.top = `${TRAY_PIECE_TOP}px`;
+          requestAnimationFrame(() => {
+            elmnt.classList.remove('is-dragging');
+            elmnt.style.visibility = 'visible';
+          });
           playAudioTone(200, 0.1, 'sawtooth');
         }
       }
