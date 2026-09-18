@@ -155,6 +155,34 @@
       70% { opacity: 1; }
       100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.35); }
     }
+
+    /* Keep the 1.5x desktop activity unchanged, but use the original 1x
+       coordinate system on phones so the board and letters scale together. */
+    @media (max-width: 600px) {
+      body { padding: 8px; }
+      .game-layout { gap: 20px; max-width: 340px; }
+      .board-container {
+        width: 340px; height: 380px; border-width: 8px; border-radius: 16px;
+        flex-shrink: 0;
+      }
+      .tray-container {
+        width: 220px; min-height: 380px; border-width: 4px; border-radius: 16px;
+        padding: 10px; flex-shrink: 0;
+      }
+      .tray-title { font-size: 1rem; margin-bottom: 10px; }
+      .stick.big-line, .slot.big-line { width: 20px; height: 210px; }
+      .stick.little-line, .slot.little-line { width: 20px; height: 105px; }
+      .stick.big-curve, .slot.big-curve { width: 105px; height: 210px; }
+      .stick.little-curve, .slot.little-curve { width: 65px; height: 115px; }
+      .stick.big-curve {
+        border-width: 20px !important; border-radius: 110px 0 0 110px;
+      }
+      .stick.little-curve {
+        border-width: 20px !important; border-radius: 70px 0 0 70px;
+      }
+      .trace-dot { width: 6px; height: 6px; }
+      .firework-particle { width: 8px; height: 8px; }
+    }
   </style>
 </head>
 <body>
@@ -177,15 +205,15 @@
   <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    const BUILD_SCALE = 1.5;
+    const BUILD_SCALE = window.matchMedia('(max-width: 600px)').matches ? 1 : 1.5;
     const TRAY_INNER_WIDTH = 192 * BUILD_SCALE;
     const TRAY_PIECE_TOP = 85 * BUILD_SCALE;
 
     const pieceSizes = {
-      'big-line': { width: 30, height: 315 },
-      'little-line': { width: 30, height: 157.5 },
-      'big-curve': { width: 157.5, height: 315 },
-      'little-curve': { width: 97.5, height: 172.5 }
+      'big-line': { width: 20 * BUILD_SCALE, height: 210 * BUILD_SCALE },
+      'little-line': { width: 20 * BUILD_SCALE, height: 105 * BUILD_SCALE },
+      'big-curve': { width: 105 * BUILD_SCALE, height: 210 * BUILD_SCALE },
+      'little-curve': { width: 65 * BUILD_SCALE, height: 115 * BUILD_SCALE }
     };
 
     // Real dot elements render consistently on iPhone Safari. Rotated CSS
@@ -195,18 +223,18 @@
       const isLine = type.includes('line');
 
       if (isLine) {
-        const count = Math.max(7, Math.round(size.height / 18));
+        const count = Math.max(7, Math.round(size.height / (12 * BUILD_SCALE)));
         for (let i = 0; i < count; i++) {
           const dot = document.createElement('span');
           dot.className = 'trace-dot';
           dot.style.left = `${size.width / 2}px`;
-          dot.style.top = `${6 + (size.height - 12) * i / (count - 1)}px`;
+          dot.style.top = `${4 * BUILD_SCALE + (size.height - 8 * BUILD_SCALE) * i / (count - 1)}px`;
           slot.appendChild(dot);
         }
         return;
       }
 
-      const inset = 11.25;
+      const inset = 7.5 * BUILD_SCALE;
       const arcWidth = size.width - inset * 2;
       const arcHeight = size.height - inset * 2;
       const count = type === 'big-curve' ? 25 : 15;
