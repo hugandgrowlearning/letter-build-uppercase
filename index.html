@@ -705,8 +705,18 @@
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
         const rect = elmnt.getBoundingClientRect();
-        offsetX = clientX - rect.left;
-        offsetY = clientY - rect.top;
+        if (elmnt.dataset.pieceType === 'little-line') {
+          /* Little lines are commonly rotated 90 degrees.  A rotated line's
+             visual bounding box has swapped dimensions, while its CSS left
+             and top still refer to the unrotated box.  Anchor it by its true
+             transform center so it does not jump away from the pointer. */
+          const size = pieceSizes['little-line'];
+          offsetX = size.width / 2;
+          offsetY = size.height / 2;
+        } else {
+          offsetX = clientX - rect.left;
+          offsetY = clientY - rect.top;
+        }
 
         elmnt.classList.add('is-dragging');
         /* Clear Safari's old tray layer before moving the element to body. */
