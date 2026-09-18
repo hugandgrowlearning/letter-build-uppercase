@@ -22,7 +22,15 @@
       background: var(--bg-color); text-align: center; user-select: none;
     }
 
-    h1 { margin: 0; color: var(--charcoal); font-size: 1.8rem; }
+    h1 {
+      margin: 0;
+      color: var(--charcoal);
+      font-family: 'Marker Felt', 'Chalkboard SE', 'Comic Sans MS', cursive;
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-shadow: 0 2px 0 rgba(229, 160, 131, 0.28);
+    }
     .brand-header {
       display: flex; align-items: center; justify-content: center; gap: 12px;
       margin: 0 auto 8px; color: var(--charcoal);
@@ -337,7 +345,7 @@
         pieces: [
           { type: 'big-line', cx: 140, cy: 190, rot: 18 },
           { type: 'big-line', cx: 200, cy: 190, rot: -18 },
-          { type: 'little-line', cx: 170, cy: 205, rot: 90 }
+          { type: 'little-line', cx: 170, cy: 235, rot: 90 }
         ]
       },
       'B': {
@@ -360,17 +368,17 @@
         prompt: 'Big line, little line, little line, little line',
         pieces: [
           { type: 'big-line', cx: 120, cy: 190, rot: 0 },
-          { type: 'little-line', cx: 165, cy: 85, rot: 90 },
-          { type: 'little-line', cx: 160, cy: 190, rot: 90 },
-          { type: 'little-line', cx: 165, cy: 295, rot: 90 }
+          { type: 'little-line', cx: 172.5, cy: 95, rot: 90 },
+          { type: 'little-line', cx: 172.5, cy: 190, rot: 90 },
+          { type: 'little-line', cx: 172.5, cy: 285, rot: 90 }
         ]
       },
       'F': {
         prompt: 'Big line, little line, little line',
         pieces: [
           { type: 'big-line', cx: 120, cy: 190, rot: 0 },
-          { type: 'little-line', cx: 165, cy: 85, rot: 90 },
-          { type: 'little-line', cx: 160, cy: 190, rot: 90 }
+          { type: 'little-line', cx: 172.5, cy: 95, rot: 90 },
+          { type: 'little-line', cx: 172.5, cy: 190, rot: 90 }
         ]
       },
       'G': {
@@ -423,10 +431,10 @@
       'M': {
         prompt: 'Big line, big line, big line, big line',
         pieces: [
-          { type: 'big-line', targetX: 60, targetY: 85, rot: 0 },
-          { type: 'big-line', targetX: 115, targetY: 90, rot: -20 },
-          { type: 'big-line', targetX: 205, targetY: 90, rot: 20 },
-          { type: 'big-line', targetX: 260, targetY: 85, rot: 0 }
+          { type: 'big-line', targetX: 70, targetY: 85, rot: 0 },
+          { type: 'big-line', targetX: 120, targetY: 90, rot: -20 },
+          { type: 'big-line', targetX: 200, targetY: 90, rot: 20 },
+          { type: 'big-line', targetX: 250, targetY: 85, rot: 0 }
         ]
       },
       'N': {
