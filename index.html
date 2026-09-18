@@ -78,15 +78,35 @@
       width: 20px; height: 105px; background: var(--wood-color);
       border: 2px solid var(--wood-border); border-radius: 10px;
     }
-    .big-curve {
-      width: 100px; height: 200px; border: 20px solid var(--wood-color);
-      border-right: none; border-radius: 100px 0 0 100px; box-sizing: border-box;
-      outline: 2px solid var(--wood-border); outline-offset: -2px;
+    /* Open C-shaped wooden curves. The old outline traced the whole bounding
+       box and visually closed the curve, making it look like a letter D. */
+    .stick.big-curve, .stick.little-curve {
+      background: transparent;
+      box-sizing: border-box;
     }
-    .little-curve {
-      width: 60px; height: 110px; border: 20px solid var(--wood-color);
-      border-right: none; border-radius: 60px 0 0 60px; box-sizing: border-box;
-      outline: 2px solid var(--wood-border); outline-offset: -2px;
+    .stick.big-curve {
+      width: 105px; height: 210px;
+      border: 22px solid var(--wood-border); border-right: 0;
+      border-radius: 110px 0 0 110px;
+    }
+    .stick.big-curve::after {
+      content: ''; position: absolute;
+      inset: 3px;
+      border: 16px solid var(--wood-color); border-right: 0;
+      border-radius: 105px 0 0 105px;
+      pointer-events: none;
+    }
+    .stick.little-curve {
+      width: 65px; height: 115px;
+      border: 22px solid var(--wood-border); border-right: 0;
+      border-radius: 70px 0 0 70px;
+    }
+    .stick.little-curve::after {
+      content: ''; position: absolute;
+      inset: 3px;
+      border: 16px solid var(--wood-color); border-right: 0;
+      border-radius: 65px 0 0 65px;
+      pointer-events: none;
     }
 
     /* Target slots - pointer-events: none allows clicking through them */
@@ -97,10 +117,10 @@
     .slot.big-line { border-radius: 10px; width: 20px; height: 210px; }
     .slot.little-line { border-radius: 10px; width: 20px; height: 105px; }
     .slot.big-curve {
-      width: 100px; height: 200px; border-radius: 100px 0 0 100px; border-right: none;
+      width: 105px; height: 210px; border-width: 4px; border-radius: 110px 0 0 110px; border-right: none;
     }
     .slot.little-curve {
-      width: 60px; height: 110px; border-radius: 60px 0 0 60px; border-right: none;
+      width: 65px; height: 115px; border-width: 4px; border-radius: 70px 0 0 70px; border-right: none;
     }
 
     .win-banner {
@@ -164,16 +184,16 @@
         prompt: 'Big line, little curve, little curve',
         pieces: [
           { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
-          { type: 'little-curve', targetX: 120, targetY: 85, rot: 180 },
-          { type: 'little-curve', targetX: 120, targetY: 185, rot: 180 }
+          { type: 'little-curve', targetX: 113, targetY: 84, rot: 180 },
+          { type: 'little-curve', targetX: 113, targetY: 180, rot: 180 }
         ]
       },
-      'C': { prompt: 'Big curve', pieces: [{ type: 'big-curve', targetX: 120, targetY: 90, rot: 0 }] },
+      'C': { prompt: 'Big curve', pieces: [{ type: 'big-curve', targetX: 120, targetY: 84, rot: 0 }] },
       'D': {
         prompt: 'Big line, big curve',
         pieces: [
           { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
-          { type: 'big-curve', targetX: 120, targetY: 90, rot: 180 }
+          { type: 'big-curve', targetX: 113, targetY: 84, rot: 180 }
         ]
       },
       'E': {
@@ -196,8 +216,8 @@
       'G': {
         prompt: 'Big curve, little line',
         pieces: [
-          { type: 'big-curve', targetX: 120, targetY: 90, rot: 0 },
-          { type: 'little-line', targetX: 170, targetY: 200, rot: 90 }
+          { type: 'big-curve', targetX: 120, targetY: 84, rot: 0 },
+          { type: 'little-line', targetX: 168, targetY: 192, rot: 90 }
         ]
       },
       'H': {
@@ -220,7 +240,7 @@
         prompt: 'Big line, little curve',
         pieces: [
           { type: 'big-line', targetX: 180, targetY: 85, rot: 0 },
-          { type: 'little-curve', targetX: 130, targetY: 195, rot: 270 }
+          { type: 'little-curve', targetX: 128, targetY: 218, rot: 270 }
         ]
       },
       'K': {
@@ -258,38 +278,38 @@
       'O': {
         prompt: 'Big curve, big curve',
         pieces: [
-          { type: 'big-curve', targetX: 100, targetY: 90, rot: 0 },
-          { type: 'big-curve', targetX: 140, targetY: 90, rot: 180 }
+          { type: 'big-curve', targetX: 108, targetY: 84, rot: 0 },
+          { type: 'big-curve', targetX: 127, targetY: 84, rot: 180 }
         ]
       },
       'P': {
         prompt: 'Big line, little curve',
         pieces: [
           { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
-          { type: 'little-curve', targetX: 120, targetY: 85, rot: 180 }
+          { type: 'little-curve', targetX: 113, targetY: 84, rot: 180 }
         ]
       },
       'Q': {
         prompt: 'Big curve, big curve, little line',
         pieces: [
-          { type: 'big-curve', targetX: 100, targetY: 90, rot: 0 },
-          { type: 'big-curve', targetX: 140, targetY: 90, rot: 180 },
-          { type: 'little-line', targetX: 190, targetY: 230, rot: -45 }
+          { type: 'big-curve', targetX: 108, targetY: 84, rot: 0 },
+          { type: 'big-curve', targetX: 127, targetY: 84, rot: 180 },
+          { type: 'little-line', targetX: 188, targetY: 225, rot: -45 }
         ]
       },
       'R': {
         prompt: 'Big line, little curve, little line',
         pieces: [
           { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
-          { type: 'little-curve', targetX: 120, targetY: 85, rot: 180 },
-          { type: 'little-line', targetX: 165, targetY: 185, rot: -45 }
+          { type: 'little-curve', targetX: 113, targetY: 84, rot: 180 },
+          { type: 'little-line', targetX: 155, targetY: 180, rot: -45 }
         ]
       },
       'S': {
         prompt: 'Little curve, little curve',
         pieces: [
-          { type: 'little-curve', targetX: 140, targetY: 85, rot: 0 },
-          { type: 'little-curve', targetX: 140, targetY: 185, rot: 180 }
+          { type: 'little-curve', targetX: 142, targetY: 105, rot: 0 },
+          { type: 'little-curve', targetX: 142, targetY: 168, rot: 180 }
         ]
       },
       'T': {
@@ -304,7 +324,7 @@
         pieces: [
           { type: 'big-line', targetX: 100, targetY: 85, rot: 0 },
           { type: 'big-line', targetX: 220, targetY: 85, rot: 0 },
-          { type: 'little-curve', targetX: 150, targetY: 195, rot: 270 }
+          { type: 'little-curve', targetX: 128, targetY: 218, rot: 270 }
         ]
       },
       'V': {
