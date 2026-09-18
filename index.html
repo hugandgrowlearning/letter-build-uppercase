@@ -695,6 +695,7 @@
     function enableDrag(elmnt) {
       let active = false;
       let offsetX = 0, offsetY = 0;
+      let centerOnPointer = false;
 
       function onStart(e) {
         if (e.cancelable) e.preventDefault();
@@ -705,7 +706,8 @@
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
         const rect = elmnt.getBoundingClientRect();
-        if (elmnt.dataset.pieceType === 'little-line') {
+        centerOnPointer = elmnt.dataset.pieceType === 'little-line';
+        if (centerOnPointer) {
           /* Little lines are commonly rotated 90 degrees.  A rotated line's
              visual bounding box has swapped dimensions, while its CSS left
              and top still refer to the unrotated box.  Anchor it by its true
@@ -724,8 +726,14 @@
         void elmnt.offsetHeight;
         document.body.appendChild(elmnt);
         elmnt.style.position = 'fixed';
-        elmnt.style.left = `${clientX - offsetX}px`;
-        elmnt.style.top = `${clientY - offsetY}px`;
+        if (centerOnPointer) {
+          elmnt.style.left = `${clientX}px`;
+          elmnt.style.top = `${clientY}px`;
+          elmnt.style.transform = `translate(-50%, -50%) rotate(${elmnt.dataset.rot}deg)`;
+        } else {
+          elmnt.style.left = `${clientX - offsetX}px`;
+          elmnt.style.top = `${clientY - offsetY}px`;
+        }
         elmnt.style.visibility = 'visible';
 
         window.addEventListener('mousemove', onMove);
@@ -742,8 +750,13 @@
         const moveX = e.touches ? e.touches[0].clientX : e.clientX;
         const moveY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        elmnt.style.left = `${moveX - offsetX}px`;
-        elmnt.style.top = `${moveY - offsetY}px`;
+        if (centerOnPointer) {
+          elmnt.style.left = `${moveX}px`;
+          elmnt.style.top = `${moveY}px`;
+        } else {
+          elmnt.style.left = `${moveX - offsetX}px`;
+          elmnt.style.top = `${moveY - offsetY}px`;
+        }
       }
 
       function onEnd(e) {
@@ -761,6 +774,12 @@
 
         const currentCx = pieceRect.left + pieceRect.width / 2 - boardRect.left;
         const currentCy = pieceRect.top + pieceRect.height / 2 - boardRect.top;
+
+        /* Remove the temporary pointer-centering transform before snapping the
+           piece into either of its normal containers. */
+        if (centerOnPointer) {
+          elmnt.style.transform = `rotate(${elmnt.dataset.rot}deg)`;
+        }
 
         const targetX = parseFloat(elmnt.dataset.targetX);
         const targetY = parseFloat(elmnt.dataset.targetY);
