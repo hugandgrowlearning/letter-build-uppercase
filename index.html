@@ -61,14 +61,6 @@
       font-size: 1.1rem; color: var(--charcoal); background: #f3d5c7; padding: 8px 15px;
       border-radius: 20px; display: inline-block; margin-bottom: 10px; font-weight: bold;
     }
-    .sound-unlock {
-      display: none; margin: 0 auto 10px; padding: 9px 16px;
-      border: 2px solid #b9775d; border-radius: 18px;
-      background: var(--cream); color: var(--charcoal);
-      font: bold 1rem 'Comic Sans MS', 'Chalkboard SE', sans-serif;
-      box-shadow: 0 3px 0 #b99479; cursor: pointer;
-    }
-    .sound-unlock.visible { display: block; }
 
     .game-layout {
       display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;
@@ -213,7 +205,6 @@
     <div><h1>Build the Alphabet</h1><div class="brand-name">Hug &amp; Grow Learning Studio</div></div>
   </div>
   <div class="prompt-box" id="promptText">Select a letter to start</div>
-  <button class="sound-unlock" id="soundUnlock" type="button">🔊 Tap to Enable Sound</button>
   <div class="letter-selector" id="letterSelector"></div>
 
   <div class="game-layout">
@@ -229,6 +220,7 @@
     const isAppleTouchDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     let audioPrimed = false;
+    let appleDingNotBefore = 0;
 
     function makeWavUrl(duration, compose) {
       const rate = 22050;
@@ -293,10 +285,6 @@
     embeddedCelebration.preload = 'auto';
     embeddedWarmup.preload = 'auto';
 
-    function showSoundButton() {
-      if (isAppleTouchDevice) document.getElementById('soundUnlock').classList.add('visible');
-    }
-
     async function playEmbeddedSound(audio) {
       try {
         audio.pause();
@@ -304,7 +292,6 @@
         await audio.play();
         return true;
       } catch (error) {
-        showSoundButton();
         return false;
       }
     }
@@ -316,15 +303,8 @@
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       embeddedWarmup.pause();
       embeddedWarmup.currentTime = 0;
-      embeddedWarmup.play().catch(() => showSoundButton());
+      embeddedWarmup.play().catch(() => {});
     }
-
-    const soundUnlockButton = document.getElementById('soundUnlock');
-    if (isAppleTouchDevice) soundUnlockButton.classList.add('visible');
-    soundUnlockButton.addEventListener('click', async () => {
-      await ensureAudioReady();
-      if (await playEmbeddedSound(embeddedDing)) soundUnlockButton.classList.remove('visible');
-    });
 
     async function ensureAudioReady() {
       try {
@@ -436,6 +416,11 @@
 
     async function playDing() {
       if (isAppleTouchDevice) {
+        /* A single spoken letter is short, but iPad keeps its speech-ducking
+           envelope briefly afterward.  Only the first quick placement needs
+           to wait; later dings are already beyond this timestamp. */
+        const wait = Math.max(0, appleDingNotBefore - performance.now());
+        if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
         await playEmbeddedSound(embeddedDing);
         return;
       }
@@ -534,6 +519,7 @@
       utterance.lang = 'en-US';
       utterance.rate = 0.78;
       utterance.pitch = 1.08;
+      if (isAppleTouchDevice) appleDingNotBefore = performance.now() + 1050;
       window.speechSynthesis.speak(utterance);
     }
 
