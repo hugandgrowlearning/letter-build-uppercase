@@ -217,6 +217,31 @@
 
   <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioPrimed = false;
+
+    async function ensureAudioReady() {
+      try {
+        if (audioCtx.state !== 'running') await audioCtx.resume();
+        /* A tiny silent buffer, started from a real tap, fully unlocks Web
+           Audio on iPad/iPhone browsers. */
+        if (!audioPrimed && audioCtx.state === 'running') {
+          const silent = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+          const source = audioCtx.createBufferSource();
+          source.buffer = silent;
+          source.connect(audioCtx.destination);
+          source.start(0);
+          audioPrimed = true;
+        }
+        return audioCtx.state === 'running';
+      } catch (error) {
+        return false;
+      }
+    }
+
+    /* iOS may suspend audio again after speech or when returning to a tab, so
+       every new touch gets an inexpensive resume check. */
+    document.addEventListener('touchstart', ensureAudioReady, { passive: true, capture: true });
+    document.addEventListener('pointerdown', ensureAudioReady, { passive: true, capture: true });
 
     const BUILD_SCALE = window.matchMedia('(max-width: 600px)').matches ? 1 : 1.5;
     const TRAY_INNER_WIDTH = 192 * BUILD_SCALE;
@@ -285,8 +310,8 @@
       };
     }
     
-    function playAudioTone(freq, duration, type = 'sine') {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+    async function playAudioTone(freq, duration, type = 'sine') {
+      if (!(await ensureAudioReady())) return;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = type;
@@ -299,8 +324,8 @@
       osc.stop(audioCtx.currentTime + duration);
     }
 
-    function playDing() {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+    async function playDing() {
+      if (!(await ensureAudioReady())) return;
       const now = audioCtx.currentTime;
       [1174.66, 2349.32].forEach((freq, index) => {
         const osc = audioCtx.createOscillator();
@@ -316,7 +341,8 @@
       });
     }
 
-    function playCelebration() {
+    async function playCelebration() {
+      if (!(await ensureAudioReady())) return;
       playFireworkPop();
       [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98].forEach((freq, index) => {
         setTimeout(() => playAudioTone(freq, 0.42, index < 3 ? 'triangle' : 'sine'), index * 95);
@@ -326,8 +352,8 @@
       setTimeout(() => playAudioTone(2093, 0.5, 'sine'), 700);
     }
 
-    function playFireworkPop() {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+    async function playFireworkPop() {
+      if (!(await ensureAudioReady())) return;
       const length = Math.floor(audioCtx.sampleRate * 0.35);
       const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -628,6 +654,7 @@
         btn.className = `letter-btn ${char === activeLetter ? 'active' : ''}`;
         btn.innerText = char;
         btn.onclick = () => {
+          ensureAudioReady();
           speakLetter(char);
           loadLetter(char);
         };
@@ -700,6 +727,7 @@
       function onStart(e) {
         if (e.cancelable) e.preventDefault();
         active = true;
+        ensureAudioReady();
         playAudioTone(300, 0.05);
 
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
