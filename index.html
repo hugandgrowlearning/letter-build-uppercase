@@ -196,6 +196,28 @@
       .trace-dot { width: 6px; height: 6px; }
       .firework-particle { width: 8px; height: 8px; }
     }
+
+    .copyright-notice {
+      position: fixed;
+      right: 10px;
+      bottom: 6px;
+      z-index: 9999;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      line-height: 1.25;
+      color: rgba(63, 49, 42, 0.48);
+      text-align: right;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @media (max-width: 600px) {
+      .copyright-notice {
+        right: 6px;
+        bottom: 4px;
+        font-size: 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -969,5 +991,10 @@
     initSelector();
     loadLetter('A');
   </script>
+
+  <div class="copyright-notice">
+    © 2026 Hug and Grow Learning Studio. Personal use only. Do not copy, share, redistribute, or sell.
+  </div>
+
 </body>
 </html>
