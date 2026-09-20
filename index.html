@@ -536,8 +536,10 @@ async function ensureAudioReady() {
       osc.stop(audioCtx.currentTime + duration);
     }
 
-    async function playDing() {
-      if (!(await ensureAudioReady())) return;
+    function playDing() {
+      if (audioCtx.state !== 'running') {
+        audioCtx.resume().catch(() => {});
+      }
       const now = audioCtx.currentTime;
       [1174.66, 2349.32].forEach((freq, index) => {
         const osc = audioCtx.createOscillator();
@@ -553,8 +555,10 @@ async function ensureAudioReady() {
       });
     }
 
-    async function playCelebration() {
-      if (!(await ensureAudioReady())) return;
+    function playCelebration() {
+      if (audioCtx.state !== 'running') {
+        audioCtx.resume().catch(() => {});
+      }
       playFireworkPop();
       [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98].forEach((freq, index) => {
         setTimeout(() => playAudioTone(freq, 0.42, index < 3 ? 'triangle' : 'sine'), index * 95);
@@ -564,8 +568,10 @@ async function ensureAudioReady() {
       setTimeout(() => playAudioTone(2093, 0.5, 'sine'), 700);
     }
 
-    async function playFireworkPop() {
-      if (!(await ensureAudioReady())) return;
+    function playFireworkPop() {
+      if (audioCtx.state !== 'running') {
+        audioCtx.resume().catch(() => {});
+      }
       const length = Math.floor(audioCtx.sampleRate * 0.35);
       const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
