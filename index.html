@@ -982,8 +982,8 @@ async function ensureAudioReady() {
 
     function enableDrag(elmnt) {
       let active = false;
-      let offsetX = 0, offsetY = 0;
-      let centerOnPointer = false;
+      let grabOffsetX = 0;
+      let grabOffsetY = 0;
 
       function onStart(e) {
         if (e.cancelable) e.preventDefault();
@@ -994,35 +994,30 @@ async function ensureAudioReady() {
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
+        // Use the visual center of the rotated piece. This avoids the jump
+        // caused by mixing a rotated getBoundingClientRect() with unrotated
+        // CSS left/top coordinates.
         const rect = elmnt.getBoundingClientRect();
-        centerOnPointer = elmnt.dataset.pieceType === 'little-line';
-        if (centerOnPointer) {
-          /* Little lines are commonly rotated 90 degrees.  A rotated line's
-             visual bounding box has swapped dimensions, while its CSS left
-             and top still refer to the unrotated box.  Anchor it by its true
-             transform center so it does not jump away from the pointer. */
-          const size = pieceSizes['little-line'];
-          offsetX = size.width / 2;
-          offsetY = size.height / 2;
-        } else {
-          offsetX = clientX - rect.left;
-          offsetY = clientY - rect.top;
-        }
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        // Preserve the exact point where the user grabbed the piece,
+        // measured relative to its visual center.
+        grabOffsetX = clientX - centerX;
+        grabOffsetY = clientY - centerY;
 
         elmnt.classList.add('is-dragging');
-        /* Clear Safari's old tray layer before moving the element to body. */
+
+        // Clear Safari's old tray compositor layer before reparenting.
         elmnt.style.visibility = 'hidden';
         void elmnt.offsetHeight;
         document.body.appendChild(elmnt);
+
+        // While dragging, left/top represent the piece's visual center.
         elmnt.style.position = 'fixed';
-        if (centerOnPointer) {
-          elmnt.style.left = `${clientX}px`;
-          elmnt.style.top = `${clientY}px`;
-          elmnt.style.transform = `translate(-50%, -50%) rotate(${elmnt.dataset.rot}deg)`;
-        } else {
-          elmnt.style.left = `${clientX - offsetX}px`;
-          elmnt.style.top = `${clientY - offsetY}px`;
-        }
+        elmnt.style.left = `${centerX}px`;
+        elmnt.style.top = `${centerY}px`;
+        elmnt.style.transform = `translate(-50%, -50%) rotate(${elmnt.dataset.rot}deg)`;
         elmnt.style.visibility = 'visible';
 
         window.addEventListener('mousemove', onMove);
@@ -1039,13 +1034,9 @@ async function ensureAudioReady() {
         const moveX = e.touches ? e.touches[0].clientX : e.clientX;
         const moveY = e.touches ? e.touches[0].clientY : e.clientY;
 
-        if (centerOnPointer) {
-          elmnt.style.left = `${moveX}px`;
-          elmnt.style.top = `${moveY}px`;
-        } else {
-          elmnt.style.left = `${moveX - offsetX}px`;
-          elmnt.style.top = `${moveY - offsetY}px`;
-        }
+        // Keep the original grab point under the pointer for every rotation.
+        elmnt.style.left = `${moveX - grabOffsetX}px`;
+        elmnt.style.top = `${moveY - grabOffsetY}px`;
       }
 
       function onEnd(e) {
@@ -1064,11 +1055,9 @@ async function ensureAudioReady() {
         const currentCx = pieceRect.left + pieceRect.width / 2 - boardRect.left;
         const currentCy = pieceRect.top + pieceRect.height / 2 - boardRect.top;
 
-        /* Remove the temporary pointer-centering transform before snapping the
-           piece into either of its normal containers. */
-        if (centerOnPointer) {
-          elmnt.style.transform = `rotate(${elmnt.dataset.rot}deg)`;
-        }
+        // Return to the normal transform used when the piece is inside
+        // the tray or board.
+        elmnt.style.transform = `rotate(${elmnt.dataset.rot}deg)`;
 
         const targetX = parseFloat(elmnt.dataset.targetX);
         const targetY = parseFloat(elmnt.dataset.targetY);
@@ -1082,11 +1071,12 @@ async function ensureAudioReady() {
           elmnt.style.left = `${targetX}px`;
           elmnt.style.top = `${targetY}px`;
           document.getElementById('board').appendChild(elmnt);
+
           requestAnimationFrame(() => {
             elmnt.classList.remove('is-dragging');
             elmnt.style.visibility = 'visible';
           });
-          
+
           elmnt.onmousedown = null;
           elmnt.ontouchstart = null;
           elmnt.style.cursor = 'default';
@@ -1107,13 +1097,16 @@ async function ensureAudioReady() {
           void elmnt.offsetHeight;
           elmnt.style.position = 'absolute';
           document.getElementById('tray').appendChild(elmnt);
+
           const size = pieceSizes[elmnt.dataset.pieceType];
           elmnt.style.left = `${(TRAY_INNER_WIDTH - size.width) / 2}px`;
           elmnt.style.top = `${TRAY_PIECE_TOP}px`;
+
           requestAnimationFrame(() => {
             elmnt.classList.remove('is-dragging');
             elmnt.style.visibility = 'visible';
           });
+
           playAudioTone(200, 0.1, 'sawtooth');
         }
       }
