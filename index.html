@@ -982,17 +982,14 @@ async function ensureAudioReady() {
 
     function enableDrag(elmnt) {
       let active = false;
+      let activePointerId = null;
       let grabOffsetX = 0;
       let grabOffsetY = 0;
 
-      function onStart(e) {
-        if (e.cancelable) e.preventDefault();
+      function beginDrag(clientX, clientY) {
         active = true;
         ensureAudioReady();
         playAudioTone(300, 0.05);
-
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
         // Use the visual center of the rotated piece. This avoids the jump
         // caused by mixing a rotated getBoundingClientRect() with unrotated
@@ -1019,35 +1016,12 @@ async function ensureAudioReady() {
         elmnt.style.top = `${centerY}px`;
         elmnt.style.transform = `translate(-50%, -50%) rotate(${elmnt.dataset.rot}deg)`;
         elmnt.style.visibility = 'visible';
-
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('touchmove', onMove, { passive: false });
-        window.addEventListener('mouseup', onEnd);
-        window.addEventListener('touchend', onEnd);
-        window.addEventListener('touchcancel', onEnd);
       }
 
-      function onMove(e) {
-        if (!active) return;
-        if (e.cancelable) e.preventDefault();
-
-        const moveX = e.touches ? e.touches[0].clientX : e.clientX;
-        const moveY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        // Keep the original grab point under the pointer for every rotation.
-        elmnt.style.left = `${moveX - grabOffsetX}px`;
-        elmnt.style.top = `${moveY - grabOffsetY}px`;
-      }
-
-      function onEnd(e) {
+      function finishDrag() {
         if (!active) return;
         active = false;
-
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('touchmove', onMove);
-        window.removeEventListener('mouseup', onEnd);
-        window.removeEventListener('touchend', onEnd);
-        window.removeEventListener('touchcancel', onEnd);
+        activePointerId = null;
 
         const boardRect = document.getElementById('board').getBoundingClientRect();
         const pieceRect = elmnt.getBoundingClientRect();
@@ -1077,6 +1051,8 @@ async function ensureAudioReady() {
             elmnt.style.visibility = 'visible';
           });
 
+          // A correctly placed piece should no longer be draggable.
+          elmnt.removeEventListener('pointerdown', onPointerDown);
           elmnt.onmousedown = null;
           elmnt.ontouchstart = null;
           elmnt.style.cursor = 'default';
@@ -1111,8 +1087,82 @@ async function ensureAudioReady() {
         }
       }
 
-      elmnt.onmousedown = onStart;
-      elmnt.ontouchstart = onStart;
+      // Pointer Events work with a mouse, finger, stylus, and interactive
+      // classroom boards such as Promethean. Pointer capture keeps the drag
+      // alive even when the pointer leaves the wooden piece.
+      function onPointerDown(e) {
+        if (active) return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (e.cancelable) e.preventDefault();
+
+        activePointerId = e.pointerId;
+        try { elmnt.setPointerCapture(e.pointerId); } catch (error) {}
+        beginDrag(e.clientX, e.clientY);
+      }
+
+      function onPointerMove(e) {
+        if (!active || e.pointerId !== activePointerId) return;
+        if (e.cancelable) e.preventDefault();
+        elmnt.style.left = `${e.clientX - grabOffsetX}px`;
+        elmnt.style.top = `${e.clientY - grabOffsetY}px`;
+      }
+
+      function onPointerEnd(e) {
+        if (!active || e.pointerId !== activePointerId) return;
+        if (e.cancelable) e.preventDefault();
+        try {
+          if (elmnt.hasPointerCapture && elmnt.hasPointerCapture(e.pointerId)) {
+            elmnt.releasePointerCapture(e.pointerId);
+          }
+        } catch (error) {}
+        finishDrag();
+      }
+
+      if (window.PointerEvent) {
+        elmnt.addEventListener('pointerdown', onPointerDown, { passive: false });
+        elmnt.addEventListener('pointermove', onPointerMove, { passive: false });
+        elmnt.addEventListener('pointerup', onPointerEnd, { passive: false });
+        elmnt.addEventListener('pointercancel', onPointerEnd, { passive: false });
+        elmnt.addEventListener('lostpointercapture', () => {
+          // Some interactive boards end capture without a normal pointerup.
+          // If that happens while dragging, settle the piece where it is.
+          if (active) finishDrag();
+        });
+        return;
+      }
+
+      // Fallback for older browsers that do not support Pointer Events.
+      function onLegacyStart(e) {
+        if (e.cancelable) e.preventDefault();
+        const point = e.touches ? e.touches[0] : e;
+        beginDrag(point.clientX, point.clientY);
+        window.addEventListener('mousemove', onLegacyMove);
+        window.addEventListener('touchmove', onLegacyMove, { passive: false });
+        window.addEventListener('mouseup', onLegacyEnd);
+        window.addEventListener('touchend', onLegacyEnd);
+        window.addEventListener('touchcancel', onLegacyEnd);
+      }
+
+      function onLegacyMove(e) {
+        if (!active) return;
+        if (e.cancelable) e.preventDefault();
+        const point = e.touches ? e.touches[0] : e;
+        elmnt.style.left = `${point.clientX - grabOffsetX}px`;
+        elmnt.style.top = `${point.clientY - grabOffsetY}px`;
+      }
+
+      function onLegacyEnd() {
+        if (!active) return;
+        window.removeEventListener('mousemove', onLegacyMove);
+        window.removeEventListener('touchmove', onLegacyMove);
+        window.removeEventListener('mouseup', onLegacyEnd);
+        window.removeEventListener('touchend', onLegacyEnd);
+        window.removeEventListener('touchcancel', onLegacyEnd);
+        finishDrag();
+      }
+
+      elmnt.onmousedown = onLegacyStart;
+      elmnt.ontouchstart = onLegacyStart;
     }
 
     initSelector();
