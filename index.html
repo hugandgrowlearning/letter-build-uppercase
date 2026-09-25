@@ -96,6 +96,28 @@
       filter: none !important;
       -webkit-filter: none !important;
     }
+
+    /* iPad/iPhone Safari: CSS filter: drop-shadow() can leave a faint
+       compositor "ghost" behind in the tray after a draggable piece is
+       reparented. Disable filtered shadows on Apple touch browsers.
+       Straight pieces keep a subtle shadow using box-shadow instead. */
+    @supports (-webkit-touch-callout: none) {
+      .stick {
+        filter: none !important;
+        -webkit-filter: none !important;
+      }
+
+      .stick.big-line,
+      .stick.little-line {
+        box-shadow: 3px 5px 5px rgba(73, 43, 16, 0.20);
+      }
+
+      .stick.big-curve,
+      .stick.little-curve {
+        box-shadow: none !important;
+      }
+    }
+
     .stick:active { cursor: grabbing; z-index: 100; }
     
     .stick.big-line {
